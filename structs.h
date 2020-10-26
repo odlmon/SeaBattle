@@ -1,0 +1,59 @@
+//
+// Created by Dmitriy on 26.10.2020.
+//
+
+#ifndef SEABATTLE_STRUCTS_H
+#define SEABATTLE_STRUCTS_H
+
+#include <vector>
+#include <windows.h>
+
+using namespace std;
+
+struct Ship { //???only pregame
+    int width, height; //in pixels for away from window logic
+    int type; //1 to 4
+    RECT rect; //global coords of ship
+    BOOL isOnMap; //pregame status + use for oldRect + can use when change place on map
+    //add if horizontal or not
+};
+
+struct DraggedShip {
+    int index;
+    RECT oldRect;
+    int deltaLeft, deltaTop, deltaRight, deltaBottom;
+};
+
+struct MapCell { //???for in-game mechanics
+    RECT rect; //global coords of cell
+    int type; // 0 if no ship
+    BOOL isAvailable; // 0 + false -> adjacent cell
+    BOOL isAttempted; // true if was shooted
+    BOOL isVisualized; //pregame prop for red/green squares
+    BOOL isPartial; //pregame prop for red square if not full
+};
+
+struct CellSquare {
+    int square;
+    int i, j;
+};
+//can have counter with accurate shoots for win determination
+struct Map {
+    RECT coord; //coord of edges
+    int side; //side in pixels
+    vector<vector<MapCell>> cells; //matrix of cells
+};
+
+struct Player {
+    Map map;
+    vector<Ship> ships;
+};
+
+struct StateInfo {
+    int clientWidth, clientHeight;
+    Player self, enemy;
+    BOOL isDragged;
+    DraggedShip draggedShip;
+};
+
+#endif //SEABATTLE_STRUCTS_H
