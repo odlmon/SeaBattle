@@ -115,6 +115,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             OnMouseMove(hwnd, lParam, pState);
             return 0;
 
+        case WM_KEYDOWN:
+            OnKeyDown(hwnd, wParam, pState);
+            return 0;
+
         case WM_LBUTTONUP: {
             pState->isDragged = FALSE;
         }

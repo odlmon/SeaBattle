@@ -31,6 +31,7 @@ void GenerateShipsPlace(StateInfo *pState) {
     int y = pState->clientHeight / 2;
 
     Ship ship = {};
+    ship.position = HORIZONTAL;
     ship.height = RECT_SIDE;
 
     ship.type = 3;
@@ -93,26 +94,24 @@ void UpdateShipRect(StateInfo *pState, int x, int y, int i) { // i is ship index
 }
 
 vector<RECT> ShipToRects(Ship ship) {
-    //add logic for vertical
     vector<RECT> result;
-    //if horizontal
-    for (int i = 0; i < ship.type; i++) {
-        result.push_back({
-                                 ship.rect.left + RECT_SIDE * i,
-                                 ship.rect.top,
-                                 ship.rect.left + RECT_SIDE * (i + 1),
-                                 ship.rect.bottom
-                         });
+    if (ship.position == HORIZONTAL) {
+        for (int i = 0; i < ship.type; i++) {
+            result.push_back({ship.rect.left + RECT_SIDE * i,
+                              ship.rect.top,
+                              ship.rect.left + RECT_SIDE * (i + 1),
+                              ship.rect.bottom
+                             });
+        }
+    } else {
+        for (int i = 0; i < ship.type; i++) {
+            result.push_back({ship.rect.left,
+                              ship.rect.top + RECT_SIDE * i,
+                              ship.rect.right,
+                              ship.rect.top + RECT_SIDE * (i + 1)
+                             });
+        }
     }
-    //if vertical
-//    for (int i = 0; i < ship.type; i++) {
-//        result.push_back({
-//            ship.rect.left,
-//            ship.rect.top + RECT_SIDE * i,
-//            ship.rect.right,
-//            ship.rect.top + RECT_SIDE * (i + 1)
-//        });
-//    }
     return result;
 }
 
@@ -125,7 +124,7 @@ vector<CellSquare> FindCellSquares(StateInfo *pState, int i) {
 
     vector<RECT> shipRects = ShipToRects(pState->self.ships[i]);
     for (int m = 0; m < COUNT_CELLS_IN_SIDE; m++) {
-        for (int n = 0; n < COUNT_CELLS_IN_SIDE; n++) { // find 3 max squares
+        for (int n = 0; n < COUNT_CELLS_IN_SIDE; n++) {
             pState->self.map.cells[m][n].isVisualized = false;
             pState->self.map.cells[m][n].isPartial = false;
 
@@ -155,6 +154,7 @@ vector<CellSquare> FindCellSquares(StateInfo *pState, int i) {
                         squares[index] = {c * d, m, n};
                     }
                 }
+
                 index++;
             }
         }
@@ -190,7 +190,7 @@ bool NotZeros(vector<CellSquare> cellSquares, int *count) {
     return (*count) != 0;
 }
 
-void MarkCells(StateInfo *pState, const vector<CellSquare>& squares, int i) {
+void MarkCells(StateInfo *pState, const vector<CellSquare> &squares, int i) {
     int count;
     if (NotZeros(squares, &count)) {
         if (count == pState->self.ships[i].type) {
@@ -208,10 +208,38 @@ void MarkCells(StateInfo *pState, const vector<CellSquare>& squares, int i) {
     }
 }
 
-void PrepareCellsForBacklighting(StateInfo *pState, int i) { // i is ship index
+void BacklightCells(StateInfo *pState, int i) { // i is ship index
     vector<CellSquare> squares = FindCellSquares(pState, i);
 
     ResolveCollisions(&squares);
 
     MarkCells(pState, squares, i);
+}
+
+void RotateShip(HWND hwnd, StateInfo *pState, int i) { // i is ship index
+    POINT point;
+    if (GetCursorPos(&point)) {
+        ScreenToClient(hwnd, &point);
+
+        swap(pState->self.ships[i].width, pState->self.ships[i].height);
+
+        int tempLeft = pState->draggedShip.deltaLeft;
+        pState->draggedShip.deltaLeft = -abs(pState->draggedShip.deltaBottom);
+        pState->draggedShip.deltaBottom = abs(pState->draggedShip.deltaRight);
+        pState->draggedShip.deltaRight = abs(pState->draggedShip.deltaTop);
+        pState->draggedShip.deltaTop = -abs(tempLeft);
+
+        pState->self.ships[i].rect = {
+                point.x - abs(pState->draggedShip.deltaLeft),
+                point.y - abs(pState->draggedShip.deltaTop),
+                point.x + abs(pState->draggedShip.deltaRight),
+                point.y + abs(pState->draggedShip.deltaBottom)
+        };
+
+        if (pState->self.ships[i].position == HORIZONTAL) {
+            pState->self.ships[i].position = VERTICAL;
+        } else {
+            pState->self.ships[i].position = HORIZONTAL;
+        }
+    }
 }

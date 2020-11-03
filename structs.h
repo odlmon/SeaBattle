@@ -10,18 +10,22 @@
 
 using namespace std;
 
+enum Position {
+    HORIZONTAL, VERTICAL
+};
+
 struct Ship { //???only pregame
     int width, height; //in pixels for away from window logic
     int type; //1 to 4
     RECT rect; //global coords of ship
     BOOL isOnMap; //pregame status + use for oldRect + can use when change place on map
-    //add if horizontal or not
+    Position position;
 };
 
 struct DraggedShip {
     int index;
     RECT oldRect;
-    int deltaLeft, deltaTop, deltaRight, deltaBottom;
+    int deltaLeft, deltaTop, deltaRight, deltaBottom; // rect - point: can be negative
 };
 
 struct MapCell { //???for in-game mechanics

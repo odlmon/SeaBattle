@@ -44,7 +44,7 @@ void InitiateRedraw(HWND hwnd) {
     InvalidateRect(hwnd, &rect, TRUE);
 }
 
-void OnMouseMove(HWND hwnd, LPARAM lParam, StateInfo* pState) {
+void OnMouseMove(HWND hwnd, LPARAM lParam, StateInfo *pState) {
     if (pState->isDragged) {
         int x = GET_X_LPARAM(lParam);
         int y = GET_Y_LPARAM(lParam);
@@ -52,7 +52,7 @@ void OnMouseMove(HWND hwnd, LPARAM lParam, StateInfo* pState) {
 
         UpdateShipRect(pState, x, y, i);
 
-        PrepareCellsForBacklighting(pState, i);
+        BacklightCells(pState, i);
 
         InitiateRedraw(hwnd);
     }
@@ -188,5 +188,15 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState) {
             index++;
             ++iter;
         }
+    }
+}
+
+void OnKeyDown(HWND hwnd, WPARAM wParam, StateInfo *pState) {
+    if ((wParam == VK_SHIFT) && pState->isDragged) {
+        RotateShip(hwnd, pState, pState->draggedShip.index);
+
+        BacklightCells(pState, pState->draggedShip.index);
+
+        InitiateRedraw(hwnd);
     }
 }

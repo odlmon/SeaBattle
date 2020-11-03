@@ -11,4 +11,6 @@ void OnPaint(HWND hwnd, HDC hdcBack, StateInfo *pState);
 
 void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState);
 
+void OnKeyDown(HWND hwnd, WPARAM wParam, StateInfo *pState);
+
 #endif //SEABATTLE_HANDLERS_H
