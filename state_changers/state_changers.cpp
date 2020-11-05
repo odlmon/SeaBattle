@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../main/config.h"
 #include "state_changers.h"
 
 #include <algorithm>

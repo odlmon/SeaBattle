@@ -1,7 +1,7 @@
 #ifndef SEABATTLE_STATE_CHANGERS_H
 #define SEABATTLE_STATE_CHANGERS_H
 
-#include "structs.h"
+#include "../main/structs.h"
 
 void InitializeMap(StateInfo *pState);
 

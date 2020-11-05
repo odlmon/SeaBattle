@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <set>
-#include <windows.h>
+#include <Windows.h>
 
 using namespace std;
 

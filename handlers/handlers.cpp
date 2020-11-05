@@ -2,9 +2,9 @@
 #define UNICODE
 #endif
 
-#include "config.h"
+#include "../main/config.h"
 #include "handlers.h"
-#include "state_changers.h"
+#include "../state_changers/state_changers.h"
 
 #include <windowsx.h>
 

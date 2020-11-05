@@ -1,7 +1,3 @@
-//
-// Created by Dmitriy on 26.10.2020.
-//
-
 #ifndef SEABATTLE_CONFIG_H
 #define SEABATTLE_CONFIG_H
 

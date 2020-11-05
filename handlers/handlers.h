@@ -1,7 +1,7 @@
 #ifndef SEABATTLE_HANDLERS_H
 #define SEABATTLE_HANDLERS_H
 
-#include "structs.h"
+#include "../main/structs.h"
 
 void OnCreate(HWND hwnd, StateInfo *pState, HDC *hdcBack, HBITMAP *hbmBack);
 

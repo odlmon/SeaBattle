@@ -2,11 +2,11 @@
 #define UNICODE
 #endif
 
-#include <windows.h>
+#include <Windows.h>
 #include <new>
 
 #include "structs.h"
-#include "handlers.h"
+#include "../handlers/handlers.h"
 
 using namespace std;
 
