@@ -13,4 +13,6 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState);
 
 void OnKeyDown(HWND hwnd, WPARAM wParam, StateInfo *pState);
 
+void OnLButtonUp(HWND hwnd, StateInfo *pState);
+
 #endif //SEABATTLE_HANDLERS_H

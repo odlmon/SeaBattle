@@ -119,9 +119,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             OnKeyDown(hwnd, wParam, pState);
             return 0;
 
-        case WM_LBUTTONUP: {
-            pState->isDragged = FALSE;
-        }
+        case WM_LBUTTONUP:
+            OnLButtonUp(hwnd, pState);
             return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);

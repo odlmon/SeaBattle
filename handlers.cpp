@@ -5,6 +5,7 @@
 #include "config.h"
 #include "handlers.h"
 #include "state_changers.h"
+
 #include <windowsx.h>
 
 const TCHAR *letters[] = {L"A", L"B", L"C", L"D", L"E", L"F", L"G", L"H", L"I", L"J"};
@@ -179,11 +180,28 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState) {
                 pState->draggedShip = {
                         index,
                         iter->rect,
+                        pState->self.ships[index].bannedCells,
+                        pState->self.ships[index].position,
                         iter->rect.left - x,
                         iter->rect.top - y,
                         iter->rect.right - x,
                         iter->rect.bottom - y
                 };
+
+                for (auto & p : pState->self.ships[index].bannedCells) {
+                    bool isFound = false;
+                    for (int i = 0; i < pState->self.ships.size(); i++) {
+                        if (i != index) {
+                            if (pState->self.ships[i].bannedCells.find(p) != pState->self.ships[i].bannedCells.end()) {
+                                isFound = true;
+                            }
+                        }
+                    }
+                    if (!isFound) {
+                        pState->self.map.cells[p.x][p.y].isAvailable = true;
+                    }
+                }
+                pState->self.ships[index].bannedCells.clear();
             }
             index++;
             ++iter;
@@ -194,6 +212,16 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState) {
 void OnKeyDown(HWND hwnd, WPARAM wParam, StateInfo *pState) {
     if ((wParam == VK_SHIFT) && pState->isDragged) {
         RotateShip(hwnd, pState, pState->draggedShip.index);
+
+        BacklightCells(pState, pState->draggedShip.index);
+
+        InitiateRedraw(hwnd);
+    }
+}
+
+void OnLButtonUp(HWND hwnd, StateInfo *pState) {
+    if (pState->isDragged) {
+        PlaceShip(pState);
 
         BacklightCells(pState, pState->draggedShip.index);
 

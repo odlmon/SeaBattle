@@ -13,4 +13,6 @@ void BacklightCells(StateInfo *pState, int i);
 
 void RotateShip(HWND hwnd, StateInfo *pState, int i);
 
+void PlaceShip(StateInfo *pState);
+
 #endif //SEABATTLE_STATE_CHANGERS_H

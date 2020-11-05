@@ -1,11 +1,8 @@
-//
-// Created by Dmitriy on 26.10.2020.
-//
-
 #ifndef SEABATTLE_STRUCTS_H
 #define SEABATTLE_STRUCTS_H
 
 #include <vector>
+#include <set>
 #include <windows.h>
 
 using namespace std;
@@ -20,11 +17,22 @@ struct Ship { //???only pregame
     RECT rect; //global coords of ship
     BOOL isOnMap; //pregame status + use for oldRect + can use when change place on map
     Position position;
+    set<POINT> bannedCells; // means backlighted red
 };
+
+inline bool operator<(const POINT& lhs, const POINT& rhs) {
+    if (lhs.x == rhs.x) {
+        return lhs.y < rhs.y;
+    } else {
+        return lhs.x < rhs.x;
+    }
+}
 
 struct DraggedShip {
     int index;
     RECT oldRect;
+    set<POINT> oldBannedCells;
+    Position position;
     int deltaLeft, deltaTop, deltaRight, deltaBottom; // rect - point: can be negative
 };
 

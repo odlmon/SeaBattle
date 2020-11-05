@@ -1,6 +1,8 @@
 #include "config.h"
 #include "state_changers.h"
 
+#include <algorithm>
+
 void InitializeMap(StateInfo *pState) {
     pState->self.map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
     pState->self.map.coord = {
@@ -31,6 +33,7 @@ void GenerateShipsPlace(StateInfo *pState) {
     int y = pState->clientHeight / 2;
 
     Ship ship = {};
+    ship.isOnMap = false;
     ship.position = HORIZONTAL;
     ship.height = RECT_SIDE;
 
@@ -190,7 +193,7 @@ bool NotZeros(vector<CellSquare> cellSquares, int *count) {
     return (*count) != 0;
 }
 
-void MarkCells(StateInfo *pState, const vector<CellSquare> &squares, int i) {
+void MarkCells(StateInfo *pState, const vector<CellSquare> &squares, int i) { // and
     int count;
     if (NotZeros(squares, &count)) {
         if (count == pState->self.ships[i].type) {
@@ -241,5 +244,113 @@ void RotateShip(HWND hwnd, StateInfo *pState, int i) { // i is ship index
         } else {
             pState->self.ships[i].position = HORIZONTAL;
         }
+    }
+}
+
+void GetCellsInfo(StateInfo *pState, vector<POINT> *placementIndexes, vector<RECT> *placementRects) {
+    for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
+        for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
+            if (pState->self.map.cells[i][j].isVisualized) {
+                if (pState->self.map.cells[i][j].isAvailable && !pState->self.map.cells[i][j].isPartial) {
+                    placementIndexes->push_back({i, j});
+                    placementRects->push_back(pState->self.map.cells[i][j].rect);
+                }
+            }
+        }
+    }
+}
+
+bool CompareLeft(RECT r1, RECT r2) { return r1.left < r2.left; }
+bool CompareTop(RECT r1, RECT r2) { return r1.top < r2.top; }
+bool CompareRight(RECT r1, RECT r2) { return r1.right > r2.right; }
+bool CompareBottom(RECT r1, RECT r2) { return r1.bottom > r2.bottom; }
+
+void SetNewRect(vector<RECT> placementRects, Ship *pDraggedShip) {
+    sort(placementRects.begin(), placementRects.end(), CompareLeft);
+    pDraggedShip->rect.left = placementRects[0].left;
+    sort(placementRects.begin(), placementRects.end(), CompareTop);
+    pDraggedShip->rect.top = placementRects[0].top;
+    sort(placementRects.begin(), placementRects.end(), CompareRight);
+    pDraggedShip->rect.right = placementRects[0].right;
+    sort(placementRects.begin(), placementRects.end(), CompareBottom);
+    pDraggedShip->rect.bottom = placementRects[0].bottom;
+}
+
+void BanCells(StateInfo *pState, const vector<POINT>& placementIndexes, Ship *pDraggedShip) {
+    //ship cells
+    for (auto &pairedIndex : placementIndexes) {
+        pState->self.map.cells[pairedIndex.x][pairedIndex.y].isAvailable = false;
+    }
+
+    // adjacent to ship cells
+    for (auto &p : placementIndexes) {
+        if (p.x - 1 > -1 && p.x - 1 < 10) {
+            pState->self.map.cells[p.x - 1][p.y].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x - 1, p.y});
+        }
+        if (p.x + 1 > -1 && p.x + 1 < 10) {
+            pState->self.map.cells[p.x + 1][p.y].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x + 1, p.y});
+        }
+        if (p.y - 1 > -1 && p.y - 1 < 10) {
+            pState->self.map.cells[p.x][p.y - 1].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x, p.y - 1});
+        }
+        if (p.y + 1 > -1 && p.y + 1 < 10) {
+            pState->self.map.cells[p.x][p.y + 1].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x, p.y + 1});
+        }
+        if (p.x - 1 > -1 && p.x - 1 < 10 && p.y - 1 > -1 && p.y - 1 < 10) {
+            pState->self.map.cells[p.x - 1][p.y - 1].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x - 1, p.y - 1});
+        }
+        if (p.x - 1 > -1 && p.x - 1 < 10 && p.y + 1 > -1 && p.y + 1 < 10) {
+            pState->self.map.cells[p.x - 1][p.y + 1].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x - 1, p.y + 1});
+        }
+        if (p.x + 1 > -1 && p.x + 1 < 10 && p.y - 1 > -1 && p.y - 1 < 10) {
+            pState->self.map.cells[p.x + 1][p.y - 1].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x + 1, p.y - 1});
+        }
+        if (p.x + 1 > -1 && p.x + 1 < 10 && p.y + 1 > -1 && p.y + 1 < 10) {
+            pState->self.map.cells[p.x + 1][p.y + 1].isAvailable = false;
+            pDraggedShip->bannedCells.insert({p.x + 1, p.y + 1});
+        }
+    }
+}
+
+void RecoverPreviousState(StateInfo *pState, Ship *pDraggedShip) {
+    pDraggedShip->rect = pState->draggedShip.oldRect;
+    pDraggedShip->bannedCells = pState->draggedShip.oldBannedCells;
+    for (auto &p : pDraggedShip->bannedCells) {
+        pState->self.map.cells[p.x][p.y].isAvailable = false;
+    }
+    pDraggedShip->position = pState->draggedShip.position;
+    if (pState->draggedShip.position == HORIZONTAL) {
+        pDraggedShip->height = RECT_SIDE;
+        pDraggedShip->width = RECT_SIDE * pDraggedShip->type;
+    } else {
+        pDraggedShip->height = RECT_SIDE * pDraggedShip->type;
+        pDraggedShip->width = RECT_SIDE;
+    }
+}
+
+void PlaceShip(StateInfo *pState) {
+    pState->isDragged = FALSE;
+
+    Ship *pDraggedShip = &(pState->self.ships[pState->draggedShip.index]);
+
+    vector<POINT> placementIndexes; // i, j of marked cells
+    vector<RECT> placementRects; // rects of marked cells
+    GetCellsInfo(pState, &placementIndexes, &placementRects);
+
+    if (placementRects.size() == pDraggedShip->type) { // when green backlight
+        pDraggedShip->isOnMap = true;
+
+        SetNewRect(placementRects, pDraggedShip);
+
+        BanCells(pState, placementIndexes, pDraggedShip);
+    } else { // when red backlight
+        RecoverPreviousState(pState, pDraggedShip);
     }
 }
