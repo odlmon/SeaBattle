@@ -140,19 +140,19 @@ vector<CellSquare> FindCellSquares(StateInfo *pState, int i) {
                 int c = cellRect.bottom - shipRect.top;
                 int d = cellRect.right - shipRect.left;
 
-                if (a > 0 && a < RECT_SIDE && b > 0 && b < RECT_SIDE) {
+                if (a >= 0 && a <= RECT_SIDE && b >= 0 && b <= RECT_SIDE) {
                     if (squares[index].square < a * b) {
                         squares[index] = {a * b, m, n};
                     }
-                } else if (c > 0 && c < RECT_SIDE && b > 0 && b < RECT_SIDE) {
+                } else if (c >= 0 && c <= RECT_SIDE && b >= 0 && b <= RECT_SIDE) {
                     if (squares[index].square < c * b) {
                         squares[index] = {c * b, m, n};
                     }
-                } else if (a > 0 && a < RECT_SIDE && d > 0 && d < RECT_SIDE) {
+                } else if (a >= 0 && a <= RECT_SIDE && d >= 0 && d <= RECT_SIDE) {
                     if (squares[index].square < a * d) {
                         squares[index] = {a * d, m, n};
                     }
-                } else if (c > 0 && c < RECT_SIDE && d > 0 && d < RECT_SIDE) {
+                } else if (c >= 0 && c <= RECT_SIDE && d >= 0 && d <= RECT_SIDE) {
                     if (squares[index].square < c * d) {
                         squares[index] = {c * d, m, n};
                     }
