@@ -15,6 +15,7 @@ struct Ship { //???only pregame
     int width, height; //in pixels for away from window logic
     int type; //1 to 4
     RECT rect; //global coords of ship
+    RECT defaultRect; //rect which we get in Generate... method
     BOOL isOnMap; //pregame status + use for oldRect + can use when change place on map
     Position position;
     set<POINT> bannedCells; // means backlighted red

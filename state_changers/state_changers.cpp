@@ -40,33 +40,43 @@ void GenerateShipsPlace(StateInfo *pState) {
     ship.type = 3;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 7 / 2, y - RECT_SIDE * 3 / 2, x - RECT_SIDE / 2, y - RECT_SIDE / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x + RECT_SIDE / 2, y - RECT_SIDE * 3 / 2, x + RECT_SIDE * 7 / 2, y - RECT_SIDE / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
 
     ship.type = 2;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE, y + RECT_SIDE * 1 / 2, x + RECT_SIDE, y + RECT_SIDE * 3 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x - RECT_SIDE * 4, y + RECT_SIDE * 1 / 2, x - RECT_SIDE * 2, y + RECT_SIDE * 3 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x + RECT_SIDE * 2, y + RECT_SIDE * 1 / 2, x + RECT_SIDE * 4, y + RECT_SIDE * 3 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
 
     ship.type = 4;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 2, y - RECT_SIDE * 7 / 2, x + RECT_SIDE * 2, y - RECT_SIDE * 5 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
 
     ship.type = 1;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 3 / 2, y + RECT_SIDE * 5 / 2, x - RECT_SIDE / 2, y + RECT_SIDE * 7 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x - RECT_SIDE * 7 / 2, y + RECT_SIDE * 5 / 2, x - RECT_SIDE * 5 / 2, y + RECT_SIDE * 7 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x + RECT_SIDE / 2, y + RECT_SIDE * 5 / 2, x + RECT_SIDE * 3 / 2, y + RECT_SIDE * 7 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x + RECT_SIDE * 5 / 2, y + RECT_SIDE * 5 / 2, x + RECT_SIDE * 7 / 2, y + RECT_SIDE * 7 / 2};
+    ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
 }
 
@@ -96,7 +106,7 @@ void UpdateShipRect(StateInfo *pState, int x, int y, int i) { // i is ship index
     }
 }
 
-vector<RECT> ShipToRects(Ship ship) {
+vector<RECT> ShipToRects(const Ship& ship) {
     vector<RECT> result;
     if (ship.position == HORIZONTAL) {
         for (int i = 0; i < ship.type; i++) {
@@ -261,8 +271,11 @@ void GetCellsInfo(StateInfo *pState, vector<POINT> *placementIndexes, vector<REC
 }
 
 bool CompareLeft(RECT r1, RECT r2) { return r1.left < r2.left; }
+
 bool CompareTop(RECT r1, RECT r2) { return r1.top < r2.top; }
+
 bool CompareRight(RECT r1, RECT r2) { return r1.right > r2.right; }
+
 bool CompareBottom(RECT r1, RECT r2) { return r1.bottom > r2.bottom; }
 
 void SetNewRect(vector<RECT> placementRects, Ship *pDraggedShip) {
@@ -276,7 +289,7 @@ void SetNewRect(vector<RECT> placementRects, Ship *pDraggedShip) {
     pDraggedShip->rect.bottom = placementRects[0].bottom;
 }
 
-void BanCells(StateInfo *pState, const vector<POINT>& placementIndexes, Ship *pDraggedShip) {
+void BanCells(StateInfo *pState, const vector<POINT> &placementIndexes, Ship *pDraggedShip) {
     //ship cells
     for (auto &pairedIndex : placementIndexes) {
         pState->self.map.cells[pairedIndex.x][pairedIndex.y].isAvailable = false;
@@ -344,13 +357,20 @@ void PlaceShip(StateInfo *pState) {
     vector<RECT> placementRects; // rects of marked cells
     GetCellsInfo(pState, &placementIndexes, &placementRects);
 
-    if (placementRects.size() == pDraggedShip->type) { // when green backlight
-        pDraggedShip->isOnMap = true;
+    if (!(pDraggedShip->rect.left > pState->self.map.coord.right ||
+        pDraggedShip->rect.right < pState->self.map.coord.left ||
+        pDraggedShip->rect.top > pState->self.map.coord.bottom ||
+        pDraggedShip->rect.bottom < pState->self.map.coord.top)) {
+        if (placementRects.size() == pDraggedShip->type) { // when green backlight
+            pDraggedShip->isOnMap = true;
 
-        SetNewRect(placementRects, pDraggedShip);
+            SetNewRect(placementRects, pDraggedShip);
 
-        BanCells(pState, placementIndexes, pDraggedShip);
-    } else { // when red backlight
-        RecoverPreviousState(pState, pDraggedShip);
+            BanCells(pState, placementIndexes, pDraggedShip);
+        } else { // when red backlight
+            RecoverPreviousState(pState, pDraggedShip);
+        }
+    } else {
+        pDraggedShip->rect = pDraggedShip->defaultRect;
     }
 }
