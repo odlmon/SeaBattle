@@ -80,6 +80,37 @@ void GenerateShipsPlace(StateInfo *pState) {
     pState->self.ships.push_back(ship);
 }
 
+void InitializeDraggedShip(StateInfo *pState, const Ship& ship, int index, int x, int y) { // means dragged ship index
+    pState->isDragged = true;
+    pState->draggedShip = {
+            index,
+            ship.rect,
+            pState->self.ships[index].bannedCells,
+            pState->self.ships[index].position,
+            ship.rect.left - x,
+            ship.rect.top - y,
+            ship.rect.right - x,
+            ship.rect.bottom - y
+    };
+}
+
+void UnbanCells(StateInfo *pState, int index) { // means dragged ship index
+    for (auto & p : pState->self.ships[index].bannedCells) {
+        bool isFound = false;
+        for (int i = 0; i < pState->self.ships.size(); i++) {
+            if (i != index) {
+                if (pState->self.ships[i].bannedCells.find(p) != pState->self.ships[i].bannedCells.end()) {
+                    isFound = true;
+                }
+            }
+        }
+        if (!isFound) {
+            pState->self.map.cells[p.x][p.y].isAvailable = true;
+        }
+    }
+    pState->self.ships[index].bannedCells.clear();
+}
+
 void UpdateShipRect(StateInfo *pState, int x, int y, int i) { // i is ship index
     pState->self.ships[i].rect = {
             x + pState->draggedShip.deltaLeft,
@@ -372,5 +403,8 @@ void PlaceShip(StateInfo *pState) {
         }
     } else {
         pDraggedShip->rect = pDraggedShip->defaultRect;
+        pDraggedShip->position = HORIZONTAL;
+        pDraggedShip->height = RECT_SIDE;
+        pDraggedShip->width = RECT_SIDE * pDraggedShip->type;
     }
 }

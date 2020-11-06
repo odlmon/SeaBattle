@@ -176,32 +176,10 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState) {
             if (x >= iter->rect.left && x <= iter->rect.right && y >= iter->rect.top &&
                 y <= iter->rect.bottom) {
                 isNotFound = false;
-                pState->isDragged = true;
-                pState->draggedShip = {
-                        index,
-                        iter->rect,
-                        pState->self.ships[index].bannedCells,
-                        pState->self.ships[index].position,
-                        iter->rect.left - x,
-                        iter->rect.top - y,
-                        iter->rect.right - x,
-                        iter->rect.bottom - y
-                };
 
-                for (auto & p : pState->self.ships[index].bannedCells) {
-                    bool isFound = false;
-                    for (int i = 0; i < pState->self.ships.size(); i++) {
-                        if (i != index) {
-                            if (pState->self.ships[i].bannedCells.find(p) != pState->self.ships[i].bannedCells.end()) {
-                                isFound = true;
-                            }
-                        }
-                    }
-                    if (!isFound) {
-                        pState->self.map.cells[p.x][p.y].isAvailable = true;
-                    }
-                }
-                pState->self.ships[index].bannedCells.clear();
+                InitializeDraggedShip(pState, *iter, index, x, y);
+
+                UnbanCells(pState, index);
             }
             index++;
             ++iter;

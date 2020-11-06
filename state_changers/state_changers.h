@@ -7,6 +7,10 @@ void InitializeMap(StateInfo *pState);
 
 void GenerateShipsPlace(StateInfo *pState);
 
+void InitializeDraggedShip(StateInfo *pState, const Ship& ship, int index, int x, int y);
+
+void UnbanCells(StateInfo *pState, int index);
+
 void UpdateShipRect(StateInfo *pState, int x, int y, int i);
 
 void BacklightCells(StateInfo *pState, int i);
