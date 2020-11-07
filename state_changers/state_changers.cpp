@@ -2,6 +2,7 @@
 #include "state_changers.h"
 
 #include <algorithm>
+#include <ctime>
 
 void InitializeMap(StateInfo *pState) {
     pState->self.map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
@@ -37,6 +38,12 @@ void GenerateShipsPlace(StateInfo *pState) {
     ship.position = HORIZONTAL;
     ship.height = RECT_SIDE;
 
+    ship.type = 4;
+    ship.width = RECT_SIDE * ship.type;
+    ship.rect = {x - RECT_SIDE * 2, y - RECT_SIDE * 7 / 2, x + RECT_SIDE * 2, y - RECT_SIDE * 5 / 2};
+    ship.defaultRect = ship.rect;
+    pState->self.ships.push_back(ship);
+
     ship.type = 3;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 7 / 2, y - RECT_SIDE * 3 / 2, x - RECT_SIDE / 2, y - RECT_SIDE / 2};
@@ -55,12 +62,6 @@ void GenerateShipsPlace(StateInfo *pState) {
     ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
     ship.rect = {x + RECT_SIDE * 2, y + RECT_SIDE * 1 / 2, x + RECT_SIDE * 4, y + RECT_SIDE * 3 / 2};
-    ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
-
-    ship.type = 4;
-    ship.width = RECT_SIDE * ship.type;
-    ship.rect = {x - RECT_SIDE * 2, y - RECT_SIDE * 7 / 2, x + RECT_SIDE * 2, y - RECT_SIDE * 5 / 2};
     ship.defaultRect = ship.rect;
     pState->self.ships.push_back(ship);
 
@@ -87,6 +88,7 @@ void InitializeDraggedShip(StateInfo *pState, const Ship& ship, int index, int x
             ship.rect,
             pState->self.ships[index].bannedCells,
             pState->self.ships[index].position,
+            pState->self.ships[index].isOnMap,
             ship.rect.left - x,
             ship.rect.top - y,
             ship.rect.right - x,
@@ -252,20 +254,18 @@ void MarkCells(StateInfo *pState, const vector<CellSquare> &squares, int i) { //
     }
 }
 
-void BacklightCells(StateInfo *pState, int i) { // i is ship index
-    vector<CellSquare> squares = FindCellSquares(pState, i);
-
+void BacklightCells(StateInfo *pState, int shipIndex) {
+    vector<CellSquare> squares = FindCellSquares(pState, shipIndex);
     ResolveCollisions(&squares);
-
-    MarkCells(pState, squares, i);
+    MarkCells(pState, squares, shipIndex);
 }
 
-void RotateShip(HWND hwnd, StateInfo *pState, int i) { // i is ship index
+void RotateShip(HWND hwnd, StateInfo *pState, int shipIndex) {
     POINT point;
     if (GetCursorPos(&point)) {
         ScreenToClient(hwnd, &point);
 
-        swap(pState->self.ships[i].width, pState->self.ships[i].height);
+        swap(pState->self.ships[shipIndex].width, pState->self.ships[shipIndex].height);
 
         int tempLeft = pState->draggedShip.deltaLeft;
         pState->draggedShip.deltaLeft = -abs(pState->draggedShip.deltaBottom);
@@ -273,17 +273,17 @@ void RotateShip(HWND hwnd, StateInfo *pState, int i) { // i is ship index
         pState->draggedShip.deltaRight = abs(pState->draggedShip.deltaTop);
         pState->draggedShip.deltaTop = -abs(tempLeft);
 
-        pState->self.ships[i].rect = {
+        pState->self.ships[shipIndex].rect = {
                 point.x - abs(pState->draggedShip.deltaLeft),
                 point.y - abs(pState->draggedShip.deltaTop),
                 point.x + abs(pState->draggedShip.deltaRight),
                 point.y + abs(pState->draggedShip.deltaBottom)
         };
 
-        if (pState->self.ships[i].position == HORIZONTAL) {
-            pState->self.ships[i].position = VERTICAL;
+        if (pState->self.ships[shipIndex].position == HORIZONTAL) {
+            pState->self.ships[shipIndex].position = VERTICAL;
         } else {
-            pState->self.ships[i].position = HORIZONTAL;
+            pState->self.ships[shipIndex].position = HORIZONTAL;
         }
     }
 }
@@ -322,8 +322,9 @@ void SetNewRect(vector<RECT> placementRects, Ship *pDraggedShip) {
 
 void BanCells(StateInfo *pState, const vector<POINT> &placementIndexes, Ship *pDraggedShip) {
     //ship cells
-    for (auto &pairedIndex : placementIndexes) {
-        pState->self.map.cells[pairedIndex.x][pairedIndex.y].isAvailable = false;
+    for (auto &p : placementIndexes) {
+        pState->self.map.cells[p.x][p.y].isAvailable = false;
+        pDraggedShip->bannedCells.insert({p.x, p.y});
     }
 
     // adjacent to ship cells
@@ -364,6 +365,7 @@ void BanCells(StateInfo *pState, const vector<POINT> &placementIndexes, Ship *pD
 }
 
 void RecoverPreviousState(StateInfo *pState, Ship *pDraggedShip) {
+    pDraggedShip->isOnMap = pState->draggedShip.oldIsOnMap;
     pDraggedShip->rect = pState->draggedShip.oldRect;
     pDraggedShip->bannedCells = pState->draggedShip.oldBannedCells;
     for (auto &p : pDraggedShip->bannedCells) {
@@ -379,32 +381,113 @@ void RecoverPreviousState(StateInfo *pState, Ship *pDraggedShip) {
     }
 }
 
-void PlaceShip(StateInfo *pState) {
-    pState->isDragged = FALSE;
+void RecoverDefaultState(Ship *pDraggedShip) {
+    pDraggedShip->isOnMap = false;
+    pDraggedShip->rect = pDraggedShip->defaultRect;
+    pDraggedShip->position = HORIZONTAL;
+    pDraggedShip->height = RECT_SIDE;
+    pDraggedShip->width = RECT_SIDE * pDraggedShip->type;
+}
 
-    Ship *pDraggedShip = &(pState->self.ships[pState->draggedShip.index]);
+bool IsShipInsideMap(StateInfo *pState, Ship *pDraggedShip) {
+    return !(pDraggedShip->rect.left > pState->self.map.coord.right ||
+             pDraggedShip->rect.right < pState->self.map.coord.left ||
+             pDraggedShip->rect.top > pState->self.map.coord.bottom ||
+             pDraggedShip->rect.bottom < pState->self.map.coord.top);
+}
+
+void PlaceShip(StateInfo *pState, int shipIndex) {
+    // means ship from game state, not DraggedShip struct
+    Ship *pDraggedShip = &(pState->self.ships[shipIndex]);
 
     vector<POINT> placementIndexes; // i, j of marked cells
     vector<RECT> placementRects; // rects of marked cells
     GetCellsInfo(pState, &placementIndexes, &placementRects);
 
-    if (!(pDraggedShip->rect.left > pState->self.map.coord.right ||
-        pDraggedShip->rect.right < pState->self.map.coord.left ||
-        pDraggedShip->rect.top > pState->self.map.coord.bottom ||
-        pDraggedShip->rect.bottom < pState->self.map.coord.top)) {
+    if (IsShipInsideMap(pState, pDraggedShip)) {
         if (placementRects.size() == pDraggedShip->type) { // when green backlight
             pDraggedShip->isOnMap = true;
 
             SetNewRect(placementRects, pDraggedShip);
-
             BanCells(pState, placementIndexes, pDraggedShip);
         } else { // when red backlight
             RecoverPreviousState(pState, pDraggedShip);
         }
     } else {
-        pDraggedShip->rect = pDraggedShip->defaultRect;
-        pDraggedShip->position = HORIZONTAL;
-        pDraggedShip->height = RECT_SIDE;
-        pDraggedShip->width = RECT_SIDE * pDraggedShip->type;
+        RecoverDefaultState(pDraggedShip);
+    }
+}
+
+void CheckStartGame(StateInfo *pState) {
+    bool isAllShipOnMap = true;
+    for (auto &ship : pState->self.ships) {
+        if (!ship.isOnMap) {
+            isAllShipOnMap = false;
+        }
+    }
+    EnableWindow(pState->startButton, isAllShipOnMap);
+}
+
+void ResetMapAndShipsState(StateInfo *pState) {
+    pState->self.map.cells.clear();
+    pState->self.ships.clear();
+    InitializeMap(pState);
+    GenerateShipsPlace(pState);
+}
+
+void DeleteOverlappedPlaces(StateInfo *pState, RECT placedRect) {
+    if (placedRect.left > pState->self.map.coord.left) {
+        placedRect.left -= RECT_SIDE;
+    }
+    if (placedRect.top > pState->self.map.coord.left) {
+        placedRect.top -= RECT_SIDE;
+    }
+    if (placedRect.right < pState->self.map.coord.right) {
+        placedRect.right += RECT_SIDE;
+    }
+    if (placedRect.bottom < pState->self.map.coord.bottom) {
+        placedRect.bottom += RECT_SIDE;
+    }
+
+    vector<vector<RECT>> placesForEach;
+    for (auto &possiblePlaces : pState->possiblePlacesForEachShip) {
+        vector<RECT> places;
+        for (auto &possiblePlace : possiblePlaces) {
+            if (!(placedRect.right > possiblePlace.left && placedRect.left < possiblePlace.right &&
+                  placedRect.top < possiblePlace.bottom && placedRect.bottom > possiblePlace.top)) {
+                places.push_back(possiblePlace);
+            }
+        }
+        placesForEach.push_back(places);
+    }
+    pState->possiblePlacesForEachShip = placesForEach;
+}
+
+void RandomizeShipPlace(StateInfo *pState) {
+    srand(time(NULL));
+    int shipIndex = 0; // means that GenerateShips initialize ships in order 4->3->2->1
+    for (int type = SHIP_TYPE_COUNT; type >= 1; type--) {
+        int index = SHIP_TYPE_COUNT - type; // index of type in possiblePlaces
+        for (int count = 0; count <= SHIP_TYPE_COUNT - type; count++) {
+            int randomShip = rand() % (pState->possiblePlacesForEachShip[index].size());
+            pState->self.ships[shipIndex].rect = pState->possiblePlacesForEachShip[index][randomShip];
+
+            int width = pState->self.ships[shipIndex].rect.right - pState->self.ships[shipIndex].rect.left;
+            int height = pState->self.ships[shipIndex].rect.bottom - pState->self.ships[shipIndex].rect.top;
+            pState->self.ships[shipIndex].width = width;
+            pState->self.ships[shipIndex].height = height;
+            if (height == RECT_SIDE) {
+                pState->self.ships[shipIndex].position = HORIZONTAL;
+            } else {
+                pState->self.ships[shipIndex].position = VERTICAL;
+            }
+
+            DeleteOverlappedPlaces(pState, pState->self.ships[shipIndex].rect);
+            BacklightCells(pState, shipIndex);
+            PlaceShip(pState, shipIndex);
+            BacklightCells(pState, shipIndex);
+
+            shipIndex++;
+        }
     }
 }

@@ -47,7 +47,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
             0,                              // Optional window styles.
             CLASS_NAME,                     // Window class
             L"SeaBattle",    // Window text
-            WS_OVERLAPPEDWINDOW,            // Window style
+            WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,            // Window style
 
             // Size and position
             CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -121,6 +121,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         case WM_LBUTTONUP:
             OnLButtonUp(hwnd, pState);
+            return 0;
+
+        case WM_COMMAND:
+            OnCommand(hwnd, lParam, pState);
             return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);

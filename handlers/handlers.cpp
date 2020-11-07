@@ -16,6 +16,92 @@ HBRUSH green = CreateSolidBrush(RGB(0, 255, 0));
 HBRUSH red = CreateSolidBrush(RGB(255, 0, 0));
 HBRUSH back = CreateSolidBrush(RGB(0, 213, 255));
 
+void SetButtons(HWND hwnd, StateInfo *pState) {
+    int x = pState->clientWidth / 2 - BUTTON_WIDTH / 2;
+    int y = pState->self.map.coord.bottom + 4 * RECT_SIDE;
+    pState->startButton = CreateWindow(
+            L"BUTTON",  // Predefined class; Unicode assumed
+            L"START",      // Button text
+            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles
+            x,         // x position
+            y,         // y position
+            BUTTON_WIDTH,        // Button width
+            BUTTON_HEIGHT,        // Button height
+            hwnd,     // Parent window
+            NULL,       // No menu.
+            (HINSTANCE) GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
+            NULL);
+    EnableWindow(pState->startButton, false);
+
+    x = pState->self.map.coord.left + (pState->self.map.coord.right - pState->self.map.coord.left - BUTTON_WIDTH) / 2;
+    pState->randomButton = CreateWindow(
+            L"BUTTON",  // Predefined class; Unicode assumed
+            L"RANDOM",      // Button text
+            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles
+            x,         // x position
+            y,         // y position
+            BUTTON_WIDTH,        // Button width
+            BUTTON_HEIGHT,        // Button height
+            hwnd,     // Parent window
+            NULL,       // No menu.
+            (HINSTANCE) GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
+            NULL);
+}
+
+vector<vector<RECT>> GetPossiblePlacesForEachType(StateInfo *pState, Position position) {
+    vector<vector<RECT>> possiblePlacesForEach;
+    RECT rect;
+
+    for (int type = SHIP_TYPE_COUNT; type >= 1; type--) {
+        vector<RECT> possiblePlaces;
+        if (position == HORIZONTAL) {
+            rect = {pState->self.map.coord.left,
+                    pState->self.map.coord.top,
+                    pState->self.map.coord.left + type * RECT_SIDE,
+                    pState->self.map.coord.top + RECT_SIDE};
+        } else {
+            rect = {pState->self.map.coord.left,
+                    pState->self.map.coord.top,
+                    pState->self.map.coord.left + RECT_SIDE,
+                    pState->self.map.coord.top + type * RECT_SIDE};
+        }
+        while (rect.bottom <= pState->self.map.coord.bottom) {
+            while (rect.right <= pState->self.map.coord.right) {
+                possiblePlaces.push_back(rect);
+                rect.left += RECT_SIDE;
+                rect.right += RECT_SIDE;
+            }
+            if (position == HORIZONTAL) {
+                rect = {pState->self.map.coord.left,
+                        rect.top + RECT_SIDE,
+                        pState->self.map.coord.left + type * RECT_SIDE,
+                        rect.bottom + RECT_SIDE};
+            } else {
+                rect = {pState->self.map.coord.left,
+                        rect.top + RECT_SIDE,
+                        pState->self.map.coord.left + RECT_SIDE,
+                        rect.top + type * RECT_SIDE + RECT_SIDE};
+            }
+        }
+        possiblePlacesForEach.push_back(possiblePlaces);
+    }
+
+    return possiblePlacesForEach;
+}
+
+vector<vector<RECT>> MergePositionsForEachType(vector<vector<RECT>> v1, vector<vector<RECT>> v2) {
+    for (int i = 0; i < SHIP_TYPE_COUNT; i++) {
+        v1[i].insert(v1[i].end(), v2[i].begin(), v2[i].end());
+    }
+    return v1;
+}
+
+void InitializePossiblePlaces(StateInfo *pState) {
+    vector<vector<RECT>> horizontalPositions = GetPossiblePlacesForEachType(pState, HORIZONTAL);
+    vector<vector<RECT>> verticalPositions = GetPossiblePlacesForEachType(pState, VERTICAL);
+    pState->possiblePlacesForEachShip = MergePositionsForEachType(horizontalPositions, verticalPositions);
+}
+
 void OnCreate(HWND hwnd, StateInfo *pState, HDC *hdcBack, HBITMAP *hbmBack) {
     RECT winRect;
 
@@ -26,8 +112,8 @@ void OnCreate(HWND hwnd, StateInfo *pState, HDC *hdcBack, HBITMAP *hbmBack) {
         pState->clientHeight = height;
 
         InitializeMap(pState);
-
         GenerateShipsPlace(pState);
+        SetButtons(hwnd, pState);
 
         //Double-buffering
         HDC hdc = GetDC(hwnd);
@@ -52,7 +138,6 @@ void OnMouseMove(HWND hwnd, LPARAM lParam, StateInfo *pState) {
         int i = pState->draggedShip.index;
 
         UpdateShipRect(pState, x, y, i);
-
         BacklightCells(pState, i);
 
         InitiateRedraw(hwnd);
@@ -126,9 +211,7 @@ void DrawGameMap(HDC hdc, StateInfo *pState) {
     SetBkMode(hdc, TRANSPARENT);
 
     DrawBacklightedCells(hdc, pState);
-
     DrawLines(hdc, pState);
-
     DrawLetters(hdc, pState);
 
     SetBkMode(hdc, OPAQUE);
@@ -178,7 +261,6 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState) {
                 isNotFound = false;
 
                 InitializeDraggedShip(pState, *iter, index, x, y);
-
                 UnbanCells(pState, index);
             }
             index++;
@@ -190,7 +272,6 @@ void OnLButtonDown(HWND hwnd, LPARAM lParam, StateInfo *pState) {
 void OnKeyDown(HWND hwnd, WPARAM wParam, StateInfo *pState) {
     if ((wParam == VK_SHIFT) && pState->isDragged) {
         RotateShip(hwnd, pState, pState->draggedShip.index);
-
         BacklightCells(pState, pState->draggedShip.index);
 
         InitiateRedraw(hwnd);
@@ -199,10 +280,25 @@ void OnKeyDown(HWND hwnd, WPARAM wParam, StateInfo *pState) {
 
 void OnLButtonUp(HWND hwnd, StateInfo *pState) {
     if (pState->isDragged) {
-        PlaceShip(pState);
+        pState->isDragged = FALSE;
 
+        PlaceShip(pState, pState->draggedShip.index);
         BacklightCells(pState, pState->draggedShip.index);
+        CheckStartGame(pState);
 
         InitiateRedraw(hwnd);
+    }
+}
+
+void OnCommand(HWND hwnd, LPARAM lParam, StateInfo *pState) {
+    if ((HWND) lParam == pState->randomButton) {
+        ResetMapAndShipsState(pState);
+
+        InitializePossiblePlaces(pState);
+        RandomizeShipPlace(pState);
+
+        EnableWindow(pState->startButton, true);
+        InitiateRedraw(hwnd);
+        SetFocus(hwnd);
     }
 }

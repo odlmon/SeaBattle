@@ -13,10 +13,16 @@ void UnbanCells(StateInfo *pState, int index);
 
 void UpdateShipRect(StateInfo *pState, int x, int y, int i);
 
-void BacklightCells(StateInfo *pState, int i);
+void BacklightCells(StateInfo *pState, int shipIndex);
 
-void RotateShip(HWND hwnd, StateInfo *pState, int i);
+void RotateShip(HWND hwnd, StateInfo *pState, int shipIndex);
 
-void PlaceShip(StateInfo *pState);
+void PlaceShip(StateInfo *pState, int shipIndex);
+
+void CheckStartGame(StateInfo *pState);
+
+void ResetMapAndShipsState(StateInfo *pState);
+
+void RandomizeShipPlace(StateInfo *pState);
 
 #endif //SEABATTLE_STATE_CHANGERS_H

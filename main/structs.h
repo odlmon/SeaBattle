@@ -34,6 +34,7 @@ struct DraggedShip {
     RECT oldRect;
     set<POINT> oldBannedCells;
     Position position;
+    BOOL oldIsOnMap;
     int deltaLeft, deltaTop, deltaRight, deltaBottom; // rect - point: can be negative
 };
 
@@ -50,6 +51,7 @@ struct CellSquare {
     int square;
     int i, j;
 };
+
 //can have counter with accurate shoots for win determination
 struct Map {
     RECT coord; //coord of edges
@@ -67,6 +69,9 @@ struct StateInfo {
     Player self, enemy;
     BOOL isDragged;
     DraggedShip draggedShip;
+    HWND startButton;
+    HWND randomButton;
+    vector<vector<RECT>> possiblePlacesForEachShip;
 };
 
 #endif //SEABATTLE_STRUCTS_H
