@@ -6,7 +6,8 @@
 #include <new>
 
 #include "structs.h"
-#include "../handlers/handlers.h"
+#include "../pregame/handlers/handlers.h"
+#include "../game/handlers/handlers.h"
 
 using namespace std;
 
@@ -26,6 +27,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = CLASS_NAME;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW); //в тестирование + в ИИ с убирание доступных из финишофф
 
     RegisterClass(&wc);
 
@@ -35,6 +37,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 //    pState->width = RECT_WIDTH;
 //    pState->height = RECT_HEIGHT;
+    pState->gameState = PREGAME;
     pState->isDragged = FALSE;
 
     if (pState == NULL) {
@@ -63,6 +66,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     }
 
     ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
 
     // Run the message loop.
 
@@ -93,7 +97,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
     switch (uMsg) {
         case WM_CREATE:
-            OnCreate(hwnd, pState, &hdcBack, &hbmBack);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnCreate(hwnd, pState, &hdcBack, &hbmBack);
+            } else {
+            }
             return 0;
 
         case WM_DESTROY:
@@ -104,27 +111,59 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return TRUE;
 
         case WM_PAINT:
-            OnPaint(hwnd, hdcBack, pState);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnPaint(hwnd, hdcBack, pState);
+            } else {
+                Game::OnPaint(hwnd, hdcBack, pState);
+            }
             return 0;
 
         case WM_LBUTTONDOWN:
-            OnLButtonDown(hwnd, lParam, pState);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnLButtonDown(hwnd, lParam, pState);
+            } else if (pState->turn == HUMAN) {
+                Game::OnLButtonDown(hwnd, lParam, pState);
+            }
             return 0;
 
         case WM_MOUSEMOVE:
-            OnMouseMove(hwnd, lParam, pState);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnMouseMove(hwnd, lParam, pState);
+            } else {
+
+            }
             return 0;
 
         case WM_KEYDOWN:
-            OnKeyDown(hwnd, wParam, pState);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnKeyDown(hwnd, wParam, pState);
+            } else {
+
+            }
             return 0;
 
         case WM_LBUTTONUP:
-            OnLButtonUp(hwnd, pState);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnLButtonUp(hwnd, pState);
+            } else {
+
+            }
             return 0;
 
         case WM_COMMAND:
-            OnCommand(hwnd, lParam, pState);
+            if (pState->gameState == PREGAME) {
+                Pregame::OnCommand(hwnd, lParam, pState);
+            } else {
+
+            }
+            return 0;
+
+        case WM_TIMER:
+            if (pState->gameState == PREGAME) {
+
+            } else {
+                Game::OnTimer(hwnd, wParam, pState);
+            }
             return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);

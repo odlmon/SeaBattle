@@ -19,6 +19,7 @@ struct Ship { //???only pregame
     BOOL isOnMap; //pregame status + use for oldRect + can use when change place on map
     Position position;
     set<POINT> bannedCells; // means backlighted red
+    int aliveCount; // game: starts with type, then dec, show all ship if zero
 };
 
 inline bool operator<(const POINT& lhs, const POINT& rhs) {
@@ -40,9 +41,9 @@ struct DraggedShip {
 
 struct MapCell { //???for in-game mechanics
     RECT rect; //global coords of cell
-    int type; // 0 if no ship
-    BOOL isAvailable; // 0 + false -> adjacent cell
-    BOOL isAttempted; // true if was shooted
+    int index; // -1 if no ship
+    BOOL isAvailable; // -1 + false -> adjacent cell  | game: can shoot
+    BOOL isAttempted; // true if was shooted | game: if shooted
     BOOL isVisualized; //pregame prop for red/green squares
     BOOL isPartial; //pregame prop for red square if not full
 };
@@ -64,14 +65,32 @@ struct Player {
     vector<Ship> ships;
 };
 
+enum GameState {
+    PREGAME, GAME
+};
+
+enum PlayerType {
+    HUMAN, COMPUTER
+};
+
+enum Direction {
+    LEFT, TOP, RIGHT, BOTTOM
+};
+
 struct StateInfo {
     int clientWidth, clientHeight;
+    GameState gameState;
     Player self, enemy;
     BOOL isDragged;
     DraggedShip draggedShip;
     HWND startButton;
     HWND randomButton;
     vector<vector<RECT>> possiblePlacesForEachShip;
+    PlayerType turn;
+    UINT_PTR timer;
+    vector<POINT> availableForComputerCells;
+    bool isGameEnded;
+    PlayerType winner;
 };
 
 #endif //SEABATTLE_STRUCTS_H

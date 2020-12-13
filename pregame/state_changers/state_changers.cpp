@@ -1,35 +1,64 @@
-#include "../main/config.h"
+#include "../../main/config.h"
 #include "state_changers.h"
 
 #include <algorithm>
 #include <ctime>
 
-void InitializeMap(StateInfo *pState) {
-    pState->self.map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
-    pState->self.map.coord = {
-            pState->clientWidth / 4 - pState->self.map.side / 2,
-            pState->clientHeight / 2 - pState->self.map.side / 2,
-            pState->clientWidth / 4 + pState->self.map.side / 2,
-            pState->clientHeight / 2 + pState->self.map.side / 2,
-    };
+void InitializeMap(StateInfo *pState, PlayerType playerType) {
+    Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
 
-    vector<MapCell> row;
-    row.reserve(COUNT_CELLS_IN_SIDE);
-    for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-        for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
-            row.push_back({{
-                                   pState->self.map.coord.left + RECT_SIDE * j,
-                                   pState->self.map.coord.top + RECT_SIDE * i,
-                                   pState->self.map.coord.left + RECT_SIDE * (j + 1),
-                                   pState->self.map.coord.top + RECT_SIDE * (i + 1)
-                           }, 0, true, false, false});
+    if (playerType == HUMAN) {
+        pPlayer->map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
+        pPlayer->map.coord = {
+                pState->clientWidth / 4 - pPlayer->map.side / 2,
+                pState->clientHeight / 2 - pPlayer->map.side / 2,
+                pState->clientWidth / 4 + pPlayer->map.side / 2,
+                pState->clientHeight / 2 + pPlayer->map.side / 2,
+        };
+
+        vector<MapCell> row;
+        row.reserve(COUNT_CELLS_IN_SIDE);
+        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
+            for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
+                row.push_back({{
+                                       pPlayer->map.coord.left + RECT_SIDE * j,
+                                       pPlayer->map.coord.top + RECT_SIDE * i,
+                                       pPlayer->map.coord.left + RECT_SIDE * (j + 1),
+                                       pPlayer->map.coord.top + RECT_SIDE * (i + 1)
+                               }, 0, true, false, false});
+            }
+            pPlayer->map.cells.push_back(row);
+            row.clear();
         }
-        pState->self.map.cells.push_back(row);
-        row.clear();
+    } else {
+        pPlayer->map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
+        pPlayer->map.coord = {
+                pState->clientWidth * 3 / 4 - pPlayer->map.side / 2,
+                pState->clientHeight / 2 - pPlayer->map.side / 2,
+                pState->clientWidth * 3 / 4 + pPlayer->map.side / 2,
+                pState->clientHeight / 2 + pPlayer->map.side / 2,
+        };
+
+        vector<MapCell> row;
+        row.reserve(COUNT_CELLS_IN_SIDE);
+        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
+            for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
+                row.push_back({{
+                                       pPlayer->map.coord.left + RECT_SIDE * j,
+                                       pPlayer->map.coord.top + RECT_SIDE * i,
+                                       pPlayer->map.coord.left + RECT_SIDE * (j + 1),
+                                       pPlayer->map.coord.top + RECT_SIDE * (i + 1)
+                               }, 0, true, false, false});
+            }
+            pPlayer->map.cells.push_back(row);
+            row.clear();
+        }
     }
 }
 
-void GenerateShipsPlace(StateInfo *pState) {
+void GenerateShipsPlace(StateInfo *pState, PlayerType playerType) {
+    Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+
     int x = pState->clientWidth * 3 / 4;
     int y = pState->clientHeight / 2;
 
@@ -42,43 +71,43 @@ void GenerateShipsPlace(StateInfo *pState) {
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 2, y - RECT_SIDE * 7 / 2, x + RECT_SIDE * 2, y - RECT_SIDE * 5 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
 
     ship.type = 3;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 7 / 2, y - RECT_SIDE * 3 / 2, x - RECT_SIDE / 2, y - RECT_SIDE / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
     ship.rect = {x + RECT_SIDE / 2, y - RECT_SIDE * 3 / 2, x + RECT_SIDE * 7 / 2, y - RECT_SIDE / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
 
     ship.type = 2;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE, y + RECT_SIDE * 1 / 2, x + RECT_SIDE, y + RECT_SIDE * 3 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
     ship.rect = {x - RECT_SIDE * 4, y + RECT_SIDE * 1 / 2, x - RECT_SIDE * 2, y + RECT_SIDE * 3 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
     ship.rect = {x + RECT_SIDE * 2, y + RECT_SIDE * 1 / 2, x + RECT_SIDE * 4, y + RECT_SIDE * 3 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
 
     ship.type = 1;
     ship.width = RECT_SIDE * ship.type;
     ship.rect = {x - RECT_SIDE * 3 / 2, y + RECT_SIDE * 5 / 2, x - RECT_SIDE / 2, y + RECT_SIDE * 7 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
     ship.rect = {x - RECT_SIDE * 7 / 2, y + RECT_SIDE * 5 / 2, x - RECT_SIDE * 5 / 2, y + RECT_SIDE * 7 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
     ship.rect = {x + RECT_SIDE / 2, y + RECT_SIDE * 5 / 2, x + RECT_SIDE * 3 / 2, y + RECT_SIDE * 7 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
     ship.rect = {x + RECT_SIDE * 5 / 2, y + RECT_SIDE * 5 / 2, x + RECT_SIDE * 7 / 2, y + RECT_SIDE * 7 / 2};
     ship.defaultRect = ship.rect;
-    pState->self.ships.push_back(ship);
+    pPlayer->ships.push_back(ship);
 }
 
 void InitializeDraggedShip(StateInfo *pState, const Ship& ship, int index, int x, int y) { // means dragged ship index
@@ -431,21 +460,79 @@ void CheckStartGame(StateInfo *pState) {
 void ResetMapAndShipsState(StateInfo *pState) {
     pState->self.map.cells.clear();
     pState->self.ships.clear();
-    InitializeMap(pState);
-    GenerateShipsPlace(pState);
+    InitializeMap(pState, HUMAN);
+    GenerateShipsPlace(pState, HUMAN);
 }
 
-void DeleteOverlappedPlaces(StateInfo *pState, RECT placedRect) {
-    if (placedRect.left > pState->self.map.coord.left) {
+vector<vector<RECT>> GetPossiblePlacesForEachType(StateInfo *pState, Position position, PlayerType playerType) {
+    Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+
+    vector<vector<RECT>> possiblePlacesForEach;
+    RECT rect;
+
+    for (int type = SHIP_TYPE_COUNT; type >= 1; type--) {
+        vector<RECT> possiblePlaces;
+        if (position == HORIZONTAL) {
+            rect = {pPlayer->map.coord.left,
+                    pPlayer->map.coord.top,
+                    pPlayer->map.coord.left + type * RECT_SIDE,
+                    pPlayer->map.coord.top + RECT_SIDE};
+        } else {
+            rect = {pPlayer->map.coord.left,
+                    pPlayer->map.coord.top,
+                    pPlayer->map.coord.left + RECT_SIDE,
+                    pPlayer->map.coord.top + type * RECT_SIDE};
+        }
+        while (rect.bottom <= pPlayer->map.coord.bottom) {
+            while (rect.right <= pPlayer->map.coord.right) {
+                possiblePlaces.push_back(rect);
+                rect.left += RECT_SIDE;
+                rect.right += RECT_SIDE;
+            }
+            if (position == HORIZONTAL) {
+                rect = {pPlayer->map.coord.left,
+                        rect.top + RECT_SIDE,
+                        pPlayer->map.coord.left + type * RECT_SIDE,
+                        rect.bottom + RECT_SIDE};
+            } else {
+                rect = {pPlayer->map.coord.left,
+                        rect.top + RECT_SIDE,
+                        pPlayer->map.coord.left + RECT_SIDE,
+                        rect.top + type * RECT_SIDE + RECT_SIDE};
+            }
+        }
+        possiblePlacesForEach.push_back(possiblePlaces);
+    }
+
+    return possiblePlacesForEach;
+}
+
+vector<vector<RECT>> MergePositionsForEachType(vector<vector<RECT>> v1, vector<vector<RECT>> v2) {
+    for (int i = 0; i < SHIP_TYPE_COUNT; i++) {
+        v1[i].insert(v1[i].end(), v2[i].begin(), v2[i].end());
+    }
+    return v1;
+}
+
+void InitializePossiblePlaces(StateInfo *pState, PlayerType playerType) {
+    vector<vector<RECT>> horizontalPositions = GetPossiblePlacesForEachType(pState, HORIZONTAL, playerType);
+    vector<vector<RECT>> verticalPositions = GetPossiblePlacesForEachType(pState, VERTICAL, playerType);
+    pState->possiblePlacesForEachShip = MergePositionsForEachType(horizontalPositions, verticalPositions);
+}
+
+void DeleteOverlappedPlaces(StateInfo *pState, RECT placedRect, PlayerType playerType) {
+    Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+
+    if (placedRect.left > pPlayer->map.coord.left) {
         placedRect.left -= RECT_SIDE;
     }
-    if (placedRect.top > pState->self.map.coord.left) {
+    if (placedRect.top > pPlayer->map.coord.top) {
         placedRect.top -= RECT_SIDE;
     }
-    if (placedRect.right < pState->self.map.coord.right) {
+    if (placedRect.right < pPlayer->map.coord.right) {
         placedRect.right += RECT_SIDE;
     }
-    if (placedRect.bottom < pState->self.map.coord.bottom) {
+    if (placedRect.bottom < pPlayer->map.coord.bottom) {
         placedRect.bottom += RECT_SIDE;
     }
 
@@ -463,29 +550,33 @@ void DeleteOverlappedPlaces(StateInfo *pState, RECT placedRect) {
     pState->possiblePlacesForEachShip = placesForEach;
 }
 
-void RandomizeShipPlace(StateInfo *pState) {
+void RandomizeShipPlace(StateInfo *pState, PlayerType playerType) {
+    Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+
     srand(time(NULL));
     int shipIndex = 0; // means that GenerateShips initialize ships in order 4->3->2->1
     for (int type = SHIP_TYPE_COUNT; type >= 1; type--) {
         int index = SHIP_TYPE_COUNT - type; // index of type in possiblePlaces
         for (int count = 0; count <= SHIP_TYPE_COUNT - type; count++) {
             int randomShip = rand() % (pState->possiblePlacesForEachShip[index].size());
-            pState->self.ships[shipIndex].rect = pState->possiblePlacesForEachShip[index][randomShip];
+            pPlayer->ships[shipIndex].rect = pState->possiblePlacesForEachShip[index][randomShip];
 
-            int width = pState->self.ships[shipIndex].rect.right - pState->self.ships[shipIndex].rect.left;
-            int height = pState->self.ships[shipIndex].rect.bottom - pState->self.ships[shipIndex].rect.top;
-            pState->self.ships[shipIndex].width = width;
-            pState->self.ships[shipIndex].height = height;
+            int width = pPlayer->ships[shipIndex].rect.right - pPlayer->ships[shipIndex].rect.left;
+            int height = pPlayer->ships[shipIndex].rect.bottom - pPlayer->ships[shipIndex].rect.top;
+            pPlayer->ships[shipIndex].width = width;
+            pPlayer->ships[shipIndex].height = height;
             if (height == RECT_SIDE) {
-                pState->self.ships[shipIndex].position = HORIZONTAL;
+                pPlayer->ships[shipIndex].position = HORIZONTAL;
             } else {
-                pState->self.ships[shipIndex].position = VERTICAL;
+                pPlayer->ships[shipIndex].position = VERTICAL;
             }
 
-            DeleteOverlappedPlaces(pState, pState->self.ships[shipIndex].rect);
-            BacklightCells(pState, shipIndex);
-            PlaceShip(pState, shipIndex);
-            BacklightCells(pState, shipIndex);
+            DeleteOverlappedPlaces(pState, pPlayer->ships[shipIndex].rect, playerType);
+            if (playerType == HUMAN) {
+                BacklightCells(pState, shipIndex);
+                PlaceShip(pState, shipIndex);
+                BacklightCells(pState, shipIndex);
+            }
 
             shipIndex++;
         }

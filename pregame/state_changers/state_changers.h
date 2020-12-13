@@ -1,11 +1,11 @@
 #ifndef SEABATTLE_STATE_CHANGERS_H
 #define SEABATTLE_STATE_CHANGERS_H
 
-#include "../main/structs.h"
+#include "../../main/structs.h"
 
-void InitializeMap(StateInfo *pState);
+void InitializeMap(StateInfo *pState, PlayerType playerType);
 
-void GenerateShipsPlace(StateInfo *pState);
+void GenerateShipsPlace(StateInfo *pState, PlayerType playerType);
 
 void InitializeDraggedShip(StateInfo *pState, const Ship& ship, int index, int x, int y);
 
@@ -23,6 +23,8 @@ void CheckStartGame(StateInfo *pState);
 
 void ResetMapAndShipsState(StateInfo *pState);
 
-void RandomizeShipPlace(StateInfo *pState);
+void InitializePossiblePlaces(StateInfo *pState, PlayerType playerType);
+
+void RandomizeShipPlace(StateInfo *pState, PlayerType playerType);
 
 #endif //SEABATTLE_STATE_CHANGERS_H
