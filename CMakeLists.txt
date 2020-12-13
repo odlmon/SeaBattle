@@ -9,12 +9,16 @@ file(COPY resources/miss.wav DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(SeaBattle Gdiplus.lib handlers_pregame handlers_game)
 
 add_library(handlers_pregame pregame/handlers/handlers.cpp pregame/handlers/handlers.h)
-target_link_libraries(handlers_pregame state_changers_pregame)
+target_link_libraries(handlers_pregame state_changers_pregame state_changers_common handlers_common)
 
 add_library(state_changers_pregame pregame/state_changers/state_changers.cpp pregame/state_changers/state_changers.h)
 
 add_library(handlers_game game/handlers/handlers.cpp game/handlers/handlers.h)
-target_link_libraries(handlers_game state_changers_game)
+target_link_libraries(handlers_game state_changers_game state_changers_common handlers_common)
 
 add_library(state_changers_game game/state_changers/state_changers.cpp game/state_changers/state_changers.h)
 target_link_libraries(state_changers_game winmm.lib)
+
+add_library(handlers_common common/handlers/handlers.cpp common/handlers/handlers.h)
+
+add_library(state_changers_common common/state_changers/state_changers.cpp common/state_changers/state_changers.h)

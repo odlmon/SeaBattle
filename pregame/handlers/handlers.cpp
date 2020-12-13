@@ -5,13 +5,13 @@
 #include "../../main/config.h"
 #include "handlers.h"
 #include "../state_changers/state_changers.h"
+#include "../../common/state_changers/state_changers.h"
+#include "../../common/handlers/handlers.h"
 
 #include <windowsx.h>
+#include <objidl.h>
 
 namespace Pregame {
-    const TCHAR *letters[] = {L"A", L"B", L"C", L"D", L"E", L"F", L"G", L"H", L"I", L"J"};
-    const TCHAR *numbers[] = {L"1", L"2", L"3", L"4", L"5", L"6", L"7", L"8", L"9", L"10"};
-
     HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH green = CreateSolidBrush(RGB(0, 255, 0));
     HBRUSH red = CreateSolidBrush(RGB(255, 0, 0));
@@ -49,50 +49,6 @@ namespace Pregame {
                 NULL);
     }
 
-    void InitiateRedraw(HWND hwnd) {
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        InvalidateRect(hwnd, &rect, TRUE);
-    }
-
-    BOOL DrawLine(HDC hdc, int x1, int y1, int x2, int y2) {
-        POINT pt;
-        MoveToEx(hdc, x1, y1, &pt);
-        return LineTo(hdc, x2, y2);
-    }
-
-    void DrawLines(HDC hdc, StateInfo *pState) {
-        for (int i = 0; i <= COUNT_CELLS_IN_SIDE; i++) {
-            int x = pState->self.map.coord.left + RECT_SIDE * i;
-            DrawLine(hdc, x, pState->self.map.coord.top, x, pState->self.map.coord.bottom);
-        }
-        for (int i = 0; i <= COUNT_CELLS_IN_SIDE; i++) {
-            int y = pState->self.map.coord.top + RECT_SIDE * i;
-            DrawLine(hdc, pState->self.map.coord.left, y, pState->self.map.coord.right, y);
-        }
-    }
-
-    void DrawLetters(HDC hdc, StateInfo *pState) {
-        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-            RECT rect = {
-                    pState->self.map.coord.left - RECT_SIDE,
-                    pState->self.map.coord.top + RECT_SIDE * i,
-                    pState->self.map.coord.left,
-                    pState->self.map.coord.top + RECT_SIDE * (i + 1)
-            };
-            DrawText(hdc, numbers[i], -1, &rect, DT_CENTER);
-        }
-        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-            RECT rect = {
-                    pState->self.map.coord.left + RECT_SIDE * i,
-                    pState->self.map.coord.top - RECT_SIDE,
-                    pState->self.map.coord.left + RECT_SIDE * (i + 1),
-                    pState->self.map.coord.top
-            };
-            DrawText(hdc, letters[i], -1, &rect, DT_CENTER);
-        }
-    }
-
     void DrawBacklightedCells(HDC hdc, StateInfo *pState) {
         //maybe add global flag if ship in map coords for optimization
         for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
@@ -110,7 +66,7 @@ namespace Pregame {
         }
     }
 
-    void DrawGameMap(HDC hdc, StateInfo *pState) {
+    void DrawGameMap(HDC hdc, StateInfo *pState, PlayerType playerType) {
         HPEN hPen = CreatePen(PS_SOLID, 3, RGB(255, 255, 255));
         HPEN oldPen = (HPEN) SelectObject(hdc, hPen);
 
@@ -122,8 +78,8 @@ namespace Pregame {
         SetBkMode(hdc, TRANSPARENT);
 
         DrawBacklightedCells(hdc, pState);
-        DrawLines(hdc, pState);
-        DrawLetters(hdc, pState);
+        DrawLines(hdc, pState, playerType);
+        DrawLetters(hdc, pState, playerType);
 
         SetBkMode(hdc, OPAQUE);
         SelectObject(hdc, oldFont);
@@ -133,10 +89,12 @@ namespace Pregame {
         DeleteObject(hPen);
     }
 
-    void DrawShips(HDC hdc, StateInfo *pState) {
+    void DrawShips(HDC hdc, StateInfo *pState, PlayerType playerType) {
+        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+
         HBRUSH brush = black;
-        auto iter = pState->self.ships.begin();
-        while (iter != pState->self.ships.end()) {
+        auto iter = pPlayer->ships.begin();
+        while (iter != pPlayer->ships.end()) {
             FillRect(hdc, &iter->rect, brush);
             ++iter;
         }
@@ -197,6 +155,7 @@ namespace Pregame {
             int height = winRect.bottom - winRect.top;
             pState->clientWidth = width;
             pState->clientHeight = height;
+            pState->background = (HBITMAP) LoadImage(GetModuleHandle(NULL), L"Sea", IMAGE_BITMAP, 0, 0, NULL);
 
             InitializeMap(pState, HUMAN);
             GenerateShipsPlace(pState, HUMAN);
@@ -229,11 +188,9 @@ namespace Pregame {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
 
-        HBRUSH brush = back;
-        FillRect(hdcBack, &ps.rcPaint, brush);
-
-        DrawGameMap(hdcBack, pState);
-        DrawShips(hdcBack, pState);
+        DrawBackground(hdcBack, pState);
+        DrawGameMap(hdcBack, pState, HUMAN);
+        DrawShips(hdcBack, pState, HUMAN);
 
         BitBlt(hdc, 0, 0, pState->clientWidth, pState->clientHeight, hdcBack, 0, 0, SRCCOPY);
 

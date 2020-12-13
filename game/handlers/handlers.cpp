@@ -5,65 +5,15 @@
 #include "../../main/config.h"
 #include "handlers.h"
 #include "../state_changers/state_changers.h"
+#include "../../common/state_changers/state_changers.h"
+#include "../../common/handlers/handlers.h"
 
 #include <windowsx.h>
 #include <ctime>
-#include <Mmsystem.h>
 
 namespace Game {
-    const TCHAR *letters[] = {L"A", L"B", L"C", L"D", L"E", L"F", L"G", L"H", L"I", L"J"};
-    const TCHAR *numbers[] = {L"1", L"2", L"3", L"4", L"5", L"6", L"7", L"8", L"9", L"10"};
-
     HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH back = CreateSolidBrush(RGB(0, 213, 255));
-
-    void InitiateRedraw(HWND hwnd) {
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        InvalidateRect(hwnd, &rect, TRUE);
-    }
-
-    BOOL DrawLine(HDC hdc, int x1, int y1, int x2, int y2) {
-        POINT pt;
-        MoveToEx(hdc, x1, y1, &pt);
-        return LineTo(hdc, x2, y2);
-    }
-
-    void DrawLines(HDC hdc, StateInfo *pState, PlayerType playerType) {
-        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
-
-        for (int i = 0; i <= COUNT_CELLS_IN_SIDE; i++) {
-            int x = pPlayer->map.coord.left + RECT_SIDE * i;
-            DrawLine(hdc, x, pPlayer->map.coord.top, x, pPlayer->map.coord.bottom);
-        }
-        for (int i = 0; i <= COUNT_CELLS_IN_SIDE; i++) {
-            int y = pPlayer->map.coord.top + RECT_SIDE * i;
-            DrawLine(hdc, pPlayer->map.coord.left, y, pPlayer->map.coord.right, y);
-        }
-    }
-
-    void DrawLetters(HDC hdc, StateInfo *pState, PlayerType playerType) {
-        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
-
-        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-            RECT rect = {
-                    pPlayer->map.coord.left - RECT_SIDE,
-                    pPlayer->map.coord.top + RECT_SIDE * i,
-                    pPlayer->map.coord.left,
-                    pPlayer->map.coord.top + RECT_SIDE * (i + 1)
-            };
-            DrawText(hdc, numbers[i], -1, &rect, DT_CENTER);
-        }
-        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-            RECT rect = {
-                    pPlayer->map.coord.left + RECT_SIDE * i,
-                    pPlayer->map.coord.top - RECT_SIDE,
-                    pPlayer->map.coord.left + RECT_SIDE * (i + 1),
-                    pPlayer->map.coord.top
-            };
-            DrawText(hdc, letters[i], -1, &rect, DT_CENTER);
-        }
-    }
 
     void DrawShootedCells(HDC hdc, StateInfo *pState, PlayerType playerType) {
         Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
@@ -132,112 +82,6 @@ namespace Game {
             }
             ++iter;
         }
-    }
-
-    void InitializeMap(StateInfo *pState, PlayerType playerType) {
-        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
-
-        if (playerType == HUMAN) {
-            pPlayer->map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
-            pPlayer->map.coord = {
-                    pState->clientWidth / 4 - pPlayer->map.side / 2,
-                    pState->clientHeight / 2 - pPlayer->map.side / 2,
-                    pState->clientWidth / 4 + pPlayer->map.side / 2,
-                    pState->clientHeight / 2 + pPlayer->map.side / 2,
-            };
-
-            vector<MapCell> row;
-            row.reserve(COUNT_CELLS_IN_SIDE);
-            for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-                for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
-                    row.push_back({{
-                                           pPlayer->map.coord.left + RECT_SIDE * j,
-                                           pPlayer->map.coord.top + RECT_SIDE * i,
-                                           pPlayer->map.coord.left + RECT_SIDE * (j + 1),
-                                           pPlayer->map.coord.top + RECT_SIDE * (i + 1)
-                                   }, 0, true, false, false});
-                }
-                pPlayer->map.cells.push_back(row);
-                row.clear();
-            }
-        } else {
-            pPlayer->map = Map{{}, RECT_SIDE * COUNT_CELLS_IN_SIDE};
-            pPlayer->map.coord = {
-                    pState->clientWidth * 3 / 4 - pPlayer->map.side / 2,
-                    pState->clientHeight / 2 - pPlayer->map.side / 2,
-                    pState->clientWidth * 3 / 4 + pPlayer->map.side / 2,
-                    pState->clientHeight / 2 + pPlayer->map.side / 2,
-            };
-
-            vector<MapCell> row;
-            row.reserve(COUNT_CELLS_IN_SIDE);
-            for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
-                for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
-                    row.push_back({{
-                                           pPlayer->map.coord.left + RECT_SIDE * j,
-                                           pPlayer->map.coord.top + RECT_SIDE * i,
-                                           pPlayer->map.coord.left + RECT_SIDE * (j + 1),
-                                           pPlayer->map.coord.top + RECT_SIDE * (i + 1)
-                                   }, 0, true, false, false});
-                }
-                pPlayer->map.cells.push_back(row);
-                row.clear();
-            }
-        }
-    }
-
-    void GenerateShipsPlace(StateInfo *pState, PlayerType playerType) {
-        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
-
-        int x = pState->clientWidth * 3 / 4;
-        int y = pState->clientHeight / 2;
-
-        Ship ship = {};
-        ship.isOnMap = false;
-        ship.position = HORIZONTAL;
-        ship.height = RECT_SIDE;
-
-        ship.type = 4;
-        ship.width = RECT_SIDE * ship.type;
-        ship.rect = {x - RECT_SIDE * 2, y - RECT_SIDE * 7 / 2, x + RECT_SIDE * 2, y - RECT_SIDE * 5 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-
-        ship.type = 3;
-        ship.width = RECT_SIDE * ship.type;
-        ship.rect = {x - RECT_SIDE * 7 / 2, y - RECT_SIDE * 3 / 2, x - RECT_SIDE / 2, y - RECT_SIDE / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-        ship.rect = {x + RECT_SIDE / 2, y - RECT_SIDE * 3 / 2, x + RECT_SIDE * 7 / 2, y - RECT_SIDE / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-
-        ship.type = 2;
-        ship.width = RECT_SIDE * ship.type;
-        ship.rect = {x - RECT_SIDE, y + RECT_SIDE * 1 / 2, x + RECT_SIDE, y + RECT_SIDE * 3 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-        ship.rect = {x - RECT_SIDE * 4, y + RECT_SIDE * 1 / 2, x - RECT_SIDE * 2, y + RECT_SIDE * 3 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-        ship.rect = {x + RECT_SIDE * 2, y + RECT_SIDE * 1 / 2, x + RECT_SIDE * 4, y + RECT_SIDE * 3 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-
-        ship.type = 1;
-        ship.width = RECT_SIDE * ship.type;
-        ship.rect = {x - RECT_SIDE * 3 / 2, y + RECT_SIDE * 5 / 2, x - RECT_SIDE / 2, y + RECT_SIDE * 7 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-        ship.rect = {x - RECT_SIDE * 7 / 2, y + RECT_SIDE * 5 / 2, x - RECT_SIDE * 5 / 2, y + RECT_SIDE * 7 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-        ship.rect = {x + RECT_SIDE / 2, y + RECT_SIDE * 5 / 2, x + RECT_SIDE * 3 / 2, y + RECT_SIDE * 7 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
-        ship.rect = {x + RECT_SIDE * 5 / 2, y + RECT_SIDE * 5 / 2, x + RECT_SIDE * 7 / 2, y + RECT_SIDE * 7 / 2};
-        ship.defaultRect = ship.rect;
-        pPlayer->ships.push_back(ship);
     }
 
     void SetButtons(HWND hwnd, StateInfo *pState) {
@@ -313,9 +157,7 @@ namespace Game {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
 
-        HBRUSH brush = back;
-        FillRect(hdcBack, &ps.rcPaint, brush);
-
+        DrawBackground(hdcBack, pState);
         DrawGameMap(hdcBack, pState, HUMAN);
         DrawShips(hdcBack, pState, HUMAN);
         DrawShootedCells(hdcBack, pState, HUMAN);

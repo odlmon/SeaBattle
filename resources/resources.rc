@@ -1,2 +1,3 @@
-Hit WAVE hit.wav
-Miss WAVE miss.wav
+Hit WAVE "hit.wav"
+Miss WAVE "miss.wav"
+Sea BITMAP "sea.bmp"

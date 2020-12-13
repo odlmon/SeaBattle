@@ -1,11 +1,7 @@
-#ifndef SEABATTLE_STATE_CHANGERS_H
-#define SEABATTLE_STATE_CHANGERS_H
+#ifndef SEABATTLE_STATE_CHANGERS_PREGAME_H
+#define SEABATTLE_STATE_CHANGERS_PREGAME_H
 
 #include "../../main/structs.h"
-
-void InitializeMap(StateInfo *pState, PlayerType playerType);
-
-void GenerateShipsPlace(StateInfo *pState, PlayerType playerType);
 
 void InitializeDraggedShip(StateInfo *pState, const Ship& ship, int index, int x, int y);
 

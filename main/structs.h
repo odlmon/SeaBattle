@@ -91,6 +91,7 @@ struct StateInfo {
     vector<POINT> availableForComputerCells;
     bool isGameEnded;
     PlayerType winner;
+    HBITMAP background;
 };
 
 #endif //SEABATTLE_STRUCTS_H
