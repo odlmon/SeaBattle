@@ -8,6 +8,7 @@
 #include "structs.h"
 #include "../pregame/handlers/handlers.h"
 #include "../game/handlers/handlers.h"
+#include "../common/handlers/handlers.h"
 
 using namespace std;
 
@@ -16,49 +17,38 @@ HBITMAP hbmBack;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-void GenerateShipsPlace(StateInfo *pState);
-
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow) {
-    // Register the window class.
-    const wchar_t CLASS_NAME[] = L"Sample Window Class";
+    const wchar_t CLASS_NAME[] = L"Window Class";
 
     WNDCLASS wc = {};
 
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = CLASS_NAME;
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW); //в тестирование + в ИИ с убирание доступных из финишофф
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.lpszMenuName = L"MainMenu";
 
     RegisterClass(&wc);
 
-    // Create state variable
-
     StateInfo *pState = new(std::nothrow) StateInfo;
 
-//    pState->width = RECT_WIDTH;
-//    pState->height = RECT_HEIGHT;
     pState->gameState = PREGAME;
     pState->isDragged = FALSE;
 
     if (pState == NULL) {
-        return 0;
+        return 1;
     }
 
-    // Create the window.
-
     HWND hwnd = CreateWindowEx(
-            0,                              // Optional window styles.
-            CLASS_NAME,                     // Window class
-            L"SeaBattle",    // Window text
-            WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,            // Window style
-
-            // Size and position
+            0,
+            CLASS_NAME,
+            L"SeaBattle",
+            WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME | WS_CLIPCHILDREN,
             CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-
-            NULL,       // Parent window
-            NULL,       // Menu
-            hInstance,  // Instance handle
-            pState        // Additional application data
+            NULL,
+            NULL,
+            hInstance,
+            pState
     );
 
     if (hwnd == NULL) {
@@ -67,8 +57,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
-
-    // Run the message loop.
 
     MSG msg = {};
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -103,7 +91,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             }
             return 0;
 
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            return 0;
+
         case WM_DESTROY:
+            OnDestroy(pState);
             PostQuitMessage(0);
             return 0;
 
@@ -152,9 +145,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         case WM_COMMAND:
             if (pState->gameState == PREGAME) {
-                Pregame::OnCommand(hwnd, lParam, pState);
+                Pregame::OnCommand(hwnd, lParam, wParam, pState);
             } else {
-
+                Game::OnCommand(hwnd, wParam, pState);
             }
             return 0;
 

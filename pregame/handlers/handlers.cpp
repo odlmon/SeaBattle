@@ -1,7 +1,3 @@
-#ifndef UNICODE
-#define UNICODE
-#endif
-
 #include "../../main/config.h"
 #include "handlers.h"
 #include "../state_changers/state_changers.h"
@@ -10,55 +6,37 @@
 
 #include <windowsx.h>
 #include <objidl.h>
+#include <ctime>
+#include <fstream>
+#include <sstream>
+#include <iterator>
 
 namespace Pregame {
-    HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
-    HBRUSH green = CreateSolidBrush(RGB(0, 255, 0));
-    HBRUSH red = CreateSolidBrush(RGB(255, 0, 0));
-    HBRUSH back = CreateSolidBrush(RGB(0, 213, 255));
-
-    void SetButtons(HWND hwnd, StateInfo *pState) {
-        int x = pState->clientWidth / 2 - BUTTON_WIDTH / 2;
-        int y = pState->self.map.coord.bottom + 4 * RECT_SIDE;
-        pState->startButton = CreateWindow(
-                L"BUTTON",  // Predefined class; Unicode assumed
-                L"START",      // Button text
-                WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles
-                x,         // x position
-                y,         // y position
-                BUTTON_WIDTH,        // Button width
-                BUTTON_HEIGHT,        // Button height
-                hwnd,     // Parent window
-                NULL,       // No menu.
-                (HINSTANCE) GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
-                NULL);
-        EnableWindow(pState->startButton, false);
-
-        x = pState->self.map.coord.left + (pState->self.map.coord.right - pState->self.map.coord.left - BUTTON_WIDTH) / 2;
-        pState->randomButton = CreateWindow(
-                L"BUTTON",  // Predefined class; Unicode assumed
-                L"RANDOM",      // Button text
-                WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles
-                x,         // x position
-                y,         // y position
-                BUTTON_WIDTH,        // Button width
-                BUTTON_HEIGHT,        // Button height
-                hwnd,     // Parent window
-                NULL,       // No menu.
-                (HINSTANCE) GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
-                NULL);
-    }
+    HBRUSH shipBrush = CreateSolidBrush(SHIP_COLOR);
+    HBRUSH allowBrush = CreateSolidBrush(ALLOW_COLOR);
+    HBRUSH forbidBrush = CreateSolidBrush(FORBID_COLOR);
+    HFONT hFont = CreateFont(RECT_SIDE, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE,
+                             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+                             DEFAULT_PITCH | FF_SWISS, GetStringFromResource(IDS_FONT));
 
     void DrawBacklightedCells(HDC hdc, StateInfo *pState) {
-        //maybe add global flag if ship in map coords for optimization
+        bool isHasNotAvailable = false;
+        for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
+            for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
+                if (pState->self.map.cells[i][j].isVisualized && !pState->self.map.cells[i][j].isAvailable) {
+                    isHasNotAvailable = true;
+                }
+            }
+        }
         for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
             for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
                 if (pState->self.map.cells[i][j].isVisualized) {
                     HBRUSH brush;
-                    if (pState->self.map.cells[i][j].isAvailable && !pState->self.map.cells[i][j].isPartial) {
-                        brush = green;
+                    if (pState->self.map.cells[i][j].isAvailable && !pState->self.map.cells[i][j].isPartial
+                        && !isHasNotAvailable) {
+                        brush = allowBrush;
                     } else {
-                        brush = red;
+                        brush = forbidBrush;
                     }
                     FillRect(hdc, &pState->self.map.cells[i][j].rect, brush);
                 }
@@ -67,14 +45,11 @@ namespace Pregame {
     }
 
     void DrawGameMap(HDC hdc, StateInfo *pState, PlayerType playerType) {
-        HPEN hPen = CreatePen(PS_SOLID, 3, RGB(255, 255, 255));
+        HPEN hPen = CreatePen(PS_SOLID, MAP_LINE_WIDTH, MAP_COLOR);
         HPEN oldPen = (HPEN) SelectObject(hdc, hPen);
 
-        HFONT hFont = CreateFont(RECT_SIDE, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE,
-                                 ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-                                 DEFAULT_PITCH | FF_SWISS, L"Arial");
         HFONT oldFont = (HFONT) SelectObject(hdc, hFont);
-        SetTextColor(hdc, RGB(255, 255, 255));
+        SetTextColor(hdc, MAP_COLOR);
         SetBkMode(hdc, TRANSPARENT);
 
         DrawBacklightedCells(hdc, pState);
@@ -83,16 +58,15 @@ namespace Pregame {
 
         SetBkMode(hdc, OPAQUE);
         SelectObject(hdc, oldFont);
-        DeleteObject(hFont);
 
         SelectObject(hdc, oldPen);
         DeleteObject(hPen);
     }
 
     void DrawShips(HDC hdc, StateInfo *pState, PlayerType playerType) {
-        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+        Player *pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
 
-        HBRUSH brush = black;
+        HBRUSH brush = shipBrush;
         auto iter = pPlayer->ships.begin();
         while (iter != pPlayer->ships.end()) {
             FillRect(hdc, &iter->rect, brush);
@@ -101,7 +75,7 @@ namespace Pregame {
     }
 
     void PrepareStructs(StateInfo *pState, PlayerType playerType) {
-        Player* pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
+        Player *pPlayer = (playerType == HUMAN) ? &(pState->self) : &(pState->enemy);
 
         for (int i = 0; i < COUNT_CELLS_IN_SIDE; i++) {
             for (int j = 0; j < COUNT_CELLS_IN_SIDE; j++) {
@@ -111,7 +85,7 @@ namespace Pregame {
             }
         }
 
-        for (auto & ship : pPlayer->ships) {
+        for (auto &ship : pPlayer->ships) {
             ship.aliveCount = ship.type;
         }
 
@@ -122,7 +96,7 @@ namespace Pregame {
                 int n = 0;
                 while (n < COUNT_CELLS_IN_SIDE && !isFound) {
                     if ((pPlayer->ships[i].rect.left == pPlayer->map.cells[m][n].rect.left) &&
-                            (pPlayer->ships[i].rect.top == pPlayer->map.cells[m][n].rect.top)) {
+                        (pPlayer->ships[i].rect.top == pPlayer->map.cells[m][n].rect.top)) {
                         isFound = true;
                         for (int j = 0; j < pPlayer->ships[i].type; j++) {
                             if (pPlayer->ships[i].position == HORIZONTAL) {
@@ -147,6 +121,46 @@ namespace Pregame {
         }
     }
 
+    void GetContentFromFile(HWND hwnd, StateInfo *pState) {
+        string line;
+        ifstream file(GetStringFromResource(IDS_STAT_FILENAME));
+        if (file.is_open()) {
+            getline(file, line);
+            file.close();
+            vector<string> vector;
+            istringstream iss(line);
+            copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter(vector));
+            bool isFileCorrupted = false;
+            if (vector.size() != 3) {
+                isFileCorrupted = true;
+            }
+            if (!isFileCorrupted) {
+                for (auto &value : vector) {
+                    try {
+                        if (stoi(value) < 0) {
+                            isFileCorrupted = true;
+                        }
+                    } catch (...) {
+                        isFileCorrupted = true;
+                    }
+                }
+            }
+            if (!isFileCorrupted) {
+                if (stoi(vector[1]) > stoi(vector[2])) {
+                    isFileCorrupted = true;
+                }
+            }
+            if (!isFileCorrupted) {
+                pState->stat = {stoi(vector[0]), stoi(vector[1]), stoi(vector[2])};
+            } else {
+                MessageBox(hwnd, GetStringFromResource(IDS_FILE_CORRUPTED), GetStringFromResource(IDS_ERROR), MB_OK);
+                pState->stat = {0, 0, 0};
+            }
+        } else {
+            pState->stat = {0, 0, 0};
+        }
+    }
+
     void OnCreate(HWND hwnd, StateInfo *pState, HDC *hdcBack, HBITMAP *hbmBack) {
         RECT winRect;
 
@@ -155,7 +169,10 @@ namespace Pregame {
             int height = winRect.bottom - winRect.top;
             pState->clientWidth = width;
             pState->clientHeight = height;
-            pState->background = (HBITMAP) LoadImage(GetModuleHandle(NULL), L"Sea", IMAGE_BITMAP, 0, 0, NULL);
+            pState->background = (HBITMAP) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BACKGROUND),
+                                                     IMAGE_BITMAP, 0, 0, NULL);
+            pState->isSoundOn = true;
+            GetContentFromFile(hwnd, pState);
 
             InitializeMap(pState, HUMAN);
             GenerateShipsPlace(pState, HUMAN);
@@ -241,36 +258,52 @@ namespace Pregame {
         }
     }
 
-    void OnCommand(HWND hwnd, LPARAM lParam, StateInfo *pState) {
+    void OnRandomButtonClick(HWND hwnd, StateInfo *pState) {
+        ResetMapAndShipsState(pState);
+
+        InitializePossiblePlaces(pState, HUMAN);
+        RandomizeShipPlace(pState, HUMAN);
+
+        EnableWindow(pState->startButton, true);
+        InitiateRedraw(hwnd);
+        SetFocus(hwnd);
+    }
+
+    void OnStartButtonClick(HWND hwnd, StateInfo *pState) {
+        srand(time(NULL));
+
+        pState->gameState = GAME;
+        pState->turn = HUMAN;
+        pState->isGameEnded = false;
+        pState->gameLength = 0;
+        pState->gameLengthTimer = SetTimer(hwnd, LENGTH_TIMER_ID, SECOND_DELAY, NULL);
+        pState->decisionBasis = {false, false, static_cast<Direction>(rand() % 4),
+                                 0, 0, 1};
+
+        InitializeMap(pState, COMPUTER);
+        GenerateShipsPlace(pState, COMPUTER);
+
+        InitializePossiblePlaces(pState, COMPUTER);
+        RandomizeShipPlace(pState, COMPUTER);
+        InitializeAvailableForTurnCells(pState);
+
+        PrepareStructs(pState, HUMAN);
+        PrepareStructs(pState, COMPUTER);
+
+        DestroyWindow(pState->startButton);
+        DestroyWindow(pState->randomButton);
+        InitiateRedraw(hwnd);
+        SetFocus(hwnd);
+    }
+
+    void OnCommand(HWND hwnd, LPARAM lParam, WPARAM wParam, StateInfo *pState) {
         if ((HWND) lParam == pState->randomButton) {
-            ResetMapAndShipsState(pState);
-
-            InitializePossiblePlaces(pState, HUMAN);
-            RandomizeShipPlace(pState, HUMAN);
-
-            EnableWindow(pState->startButton, true);
-            InitiateRedraw(hwnd);
-            SetFocus(hwnd);
+            OnRandomButtonClick(hwnd, pState);
+        } else if ((HWND) lParam == pState->startButton) {
+            OnStartButtonClick(hwnd, pState);
+        } else {
+            OnMainMenuButtonsClick(hwnd, wParam, pState);
         }
-        if ((HWND) lParam == pState->startButton) {
-            pState->gameState = GAME;
-            pState->turn = HUMAN;
-            pState->isGameEnded = false;
 
-            InitializeMap(pState, COMPUTER);
-            GenerateShipsPlace(pState, COMPUTER);
-
-            InitializePossiblePlaces(pState, COMPUTER);
-            RandomizeShipPlace(pState, COMPUTER);
-            InitializeAvailableForTurnCells(pState);
-
-            PrepareStructs(pState, HUMAN);
-            PrepareStructs(pState, COMPUTER);
-
-            DestroyWindow(pState->startButton);
-            DestroyWindow(pState->randomButton);
-            InitiateRedraw(hwnd);
-            SetFocus(hwnd);
-        }
     }
 }

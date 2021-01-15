@@ -1,0 +1,19 @@
+#include "windows.h"
+
+#include "../main/config.h"
+
+MainMenu MENU
+{
+    POPUP "Game"
+    {
+        MENUITEM "New game", IDM_NEW_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "Statistics", IDM_STAT
+        MENUITEM "Sound", IDM_SOUND, CHECKED
+        MENUITEM SEPARATOR
+        MENUITEM "Exit", IDM_EXIT
+    }
+
+    MENUITEM "Help", IDM_HELP
+}
+

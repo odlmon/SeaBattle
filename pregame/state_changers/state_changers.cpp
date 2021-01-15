@@ -129,6 +129,7 @@ vector<CellSquare> FindCellSquares(StateInfo *pState, int i) {
             }
         }
     }
+    shipRects.clear();
 
     return squares;
 }
@@ -334,7 +335,7 @@ void PlaceShip(StateInfo *pState, int shipIndex) {
 
             SetNewRect(placementRects, pDraggedShip);
             BanCells(pState, placementIndexes, pDraggedShip);
-        } else { // when red backlight
+        } else { // when forbidBrush backlight
             RecoverPreviousState(pState, pDraggedShip);
         }
     } else {

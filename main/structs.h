@@ -18,7 +18,7 @@ struct Ship { //???only pregame
     RECT defaultRect; //rect which we get in Generate... method
     BOOL isOnMap; //pregame status + use for oldRect + can use when change place on map
     Position position;
-    set<POINT> bannedCells; // means backlighted red
+    set<POINT> bannedCells; // means backlighted forbidBrush
     int aliveCount; // game: starts with type, then dec, show all ship if zero
 };
 
@@ -77,6 +77,18 @@ enum Direction {
     LEFT, TOP, RIGHT, BOTTOM
 };
 
+struct DecisionBasis {
+    bool isFinishOff;
+    bool isDirectionFound;
+    Direction direction;
+    int i, j, shift;
+};
+
+struct Stat {
+    int bestVictoryTime;
+    int wins, games;
+};
+
 struct StateInfo {
     int clientWidth, clientHeight;
     GameState gameState;
@@ -87,11 +99,16 @@ struct StateInfo {
     HWND randomButton;
     vector<vector<RECT>> possiblePlacesForEachShip;
     PlayerType turn;
-    UINT_PTR timer;
+    UINT_PTR turnTimer;
     vector<POINT> availableForComputerCells;
     bool isGameEnded;
     PlayerType winner;
     HBITMAP background;
+    UINT_PTR gameLengthTimer;
+    int gameLength; // in secs
+    bool isSoundOn;
+    DecisionBasis decisionBasis;
+    Stat stat;
 };
 
 #endif //SEABATTLE_STRUCTS_H

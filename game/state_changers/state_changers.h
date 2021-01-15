@@ -3,10 +3,10 @@
 
 #include "../../main/structs.h"
 
-bool CheckWinOf(HWND hwnd, StateInfo *pState, PlayerType playerType);
-
+bool CheckWinOf(StateInfo *pState, PlayerType playerType);
 void UnableAdjacentCells(StateInfo *pState, int shipIndex, PlayerType playerType);
-
 void MakeComputerMove(HWND hwnd, StateInfo *pState);
+void MakeHumanMove(HWND hwnd, StateInfo *pState, int i, int j);
+void FinishGame(HWND hwnd, StateInfo *pState);
 
 #endif //SEABATTLE_STATE_CHANGERS_H
